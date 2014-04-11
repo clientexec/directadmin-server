@@ -10,6 +10,11 @@ require_once 'modules/admin/models/ServerPlugin.php';
 */
 class PluginDirectAdmin extends ServerPlugin
 {
+    public $features = array(
+        'packageName' =>  true,
+        'testConnection' => false,
+        'showNameservers' => true
+    );
     public $usesPackageName = true;
 
     function getVariables()
