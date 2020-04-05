@@ -464,7 +464,7 @@ class DA {
     var $useSSL;
     var $settings;
 
-    function DA($settings)
+    function __construct($settings)
     {
         $this->settings = $settings;
     }
@@ -511,8 +511,9 @@ class DA {
 
         $this->result = curl_exec($ch);
         if ( curl_errno($ch) ) {
+            $error = curl_error($ch);
             curl_close($ch);
-            throw new CE_Exception('DirectAdmin Error: ' . curl_error($ch));
+            throw new CE_Exception('DirectAdmin Error: ' . $error);
         }
         curl_close($ch);
         return $this->result;
