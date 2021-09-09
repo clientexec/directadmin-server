@@ -12,6 +12,7 @@ class PluginDirectAdmin extends ServerPlugin
         'packageName' =>  true,
         'testConnection' => true,
         'showNameservers' => true,
+        'directlink' => true,
         'upgrades' => true
     );
 
@@ -84,6 +85,10 @@ class PluginDirectAdmin extends ServerPlugin
             $return['msg'] = $msg[1];
         } else {
             $return['error'] = '0';
+            $result = explode('&', $result);
+            if (isset($result[2])) {
+                $return['details'] = urldecode(substr($result[2], 8));
+            }
         }
         return $return;
     }
@@ -436,6 +441,54 @@ class PluginDirectAdmin extends ServerPlugin
             throw new CE_Exception('Connection to server failed');
         }
     }
+
+    function getDirectLink($userPackage, $getRealLink = true, $fromAdmin = false, $isReseller = false)
+    {
+        $args = $this->buildParams($userPackage);
+        $linkText = $this->user->lang('Login to DirectAdmin');
+        if ($fromAdmin) {
+            $cmd = 'panellogin';
+            return [
+                'cmd' => $cmd,
+                'label' => $linkText
+            ];
+        } elseif ($getRealLink) {
+            $sock = new DA($args);
+            $sock->setMethod('POST');
+            $sock->loginAs('login');
+            $result = $sock->query(
+                '/CMD_API_LOGIN_KEYS',
+                [
+                    'max_uses' => 1,
+                    'clear_key' => 'no',
+                    'action' => 'create',
+                    'type' => 'one_time_url',
+                    'passwd' => $args['server']['variables']['plugin_directadmin_Password'],
+                ]
+            );
+            $result = $this->processResult($result);
+            return [
+                'link'    => '<li><a target="_blank" href="' . $result->data->url .'">' .$linkText . '</a></li>',
+                'rawlink' =>  $result['details'],
+                'form'    => ''
+            ];
+        } else {
+            $link = 'index.php?fuse=clients&controller=products&action=openpackagedirectlink&packageId='.$userPackage->getId().'&sessionHash='.CE_Lib::getSessionHash();
+
+            return [
+                'link' => '<li><a target="_blank" href="' . $link .  '">' .$linkText . '</a></li>',
+                'form' => ''
+            ];
+        }
+    }
+
+
+    function dopanellogin($args)
+    {
+        $userPackage = new UserPackage($args['userPackageId']);
+        $response = $this->getDirectLink($userPackage);
+        return $response['rawlink'];
+    }
 }
 
 class DA
@@ -458,7 +511,12 @@ class DA
         $this->port = $args['server']['variables']['plugin_directadmin_Port'];
         $this->useSSL = $args['server']['variables']['plugin_directadmin_Use_SSL'];
         $this->user = $args['server']['variables']['plugin_directadmin_Username'];
-        $this->pass =$args['server']['variables']['plugin_directadmin_Password'];
+        $this->pass = $args['server']['variables']['plugin_directadmin_Password'];
+    }
+
+    public function loginAs($login)
+    {
+        $this->user = $this->user . '|' . $login;
     }
 
     public function setMethod($method = 'GET')
