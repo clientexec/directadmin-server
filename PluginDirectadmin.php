@@ -110,11 +110,11 @@ class PluginDirectAdmin extends ServerPlugin
         $tArray = [
             'action' => 'create',
             'add' => 'Submit',
-            'username' => $args['package']['username'],
+            'username' => strtolower($args['package']['username']),
             'email' => $args['customer']['email'],
             'passwd' => $args['package']['password'],
             'passwd2' => $args['package']['password'],
-            'domain' => $args['package']['domain_name'],
+            'domain' => strtolower($args['package']['domain_name']),
             'package' => $packageName,
             'ip' => $ip,
             'notify' => 'no'
@@ -152,7 +152,7 @@ class PluginDirectAdmin extends ServerPlugin
         $tArray = [
             'confirmed' => 'Confirm',
             'delete' => 'yes',
-            'select0' => $args['package']['username']
+            'select0' => strtolower($args['package']['username'])
         ];
         $result = $sock->query('/CMD_API_SELECT_USERS', $tArray);
         CE_Lib::log(4, 'DirectAdmin Delete Result: ' . $result);
@@ -191,7 +191,7 @@ class PluginDirectAdmin extends ServerPlugin
             switch ($key) {
                 case 'password':
                     $tArray = [
-                        'username' => $args['package']['username'],
+                        'username' => strtolower($args['package']['username']),
                         'passwd' => $value,
                         'passwd2' => $value
                     ];
@@ -220,7 +220,7 @@ class PluginDirectAdmin extends ServerPlugin
                 case 'ip':
                     $tArray = [
                         'action' => 'ip',
-                        'user' => $args['package']['username'],
+                        'user' => strtolower($args['package']['username']),
                         'ip' => $value
                     ];
 
@@ -247,7 +247,7 @@ class PluginDirectAdmin extends ServerPlugin
                 case 'package':
                     $tArray = [
                         'action' => 'package',
-                        'user' => $args['package']['username'],
+                        'user' => strtolower($args['package']['username']),
                         'package' => $value
                     ];
 
@@ -283,7 +283,7 @@ class PluginDirectAdmin extends ServerPlugin
         $tArray = [
             'location' => 'CMD_SELECT_USERS',
             'suspend'  => 'Suspend/Unsuspend',
-            'select0'  => $args['package']['username'],
+            'select0'  => strtolower($args['package']['username']),
             'dosuspend' => 1
         ];
         $result = $sock->query('/CMD_API_SELECT_USERS', $tArray);
@@ -318,7 +318,7 @@ class PluginDirectAdmin extends ServerPlugin
         $tArray = [
             'location' => 'CMD_SELECT_USERS',
             'suspend'  => 'Suspend/Unsuspend',
-            'select0'  => $args['package']['username'],
+            'select0'  => strtolower($args['package']['username']),
             'dounsuspend' => 1
         ];
         $result = $sock->query('/CMD_API_SELECT_USERS', $tArray);
@@ -390,7 +390,7 @@ class PluginDirectAdmin extends ServerPlugin
     {
         $sock = new DA($args);
         $sock->setMethod('GET');
-        $str = 'user=' .  $args['package']['username'];
+        $str = 'user=' .  strtolower($args['package']['username']);
         $result = $sock->query('/CMD_API_SHOW_USER_CONFIG?' . $str);
         $result = $this->processResult($result);
         if ($result['error'] == '1') {
@@ -406,7 +406,7 @@ class PluginDirectAdmin extends ServerPlugin
         $actions = [];
         $sock = new DA($args);
         $sock->setMethod('GET');
-        $str = 'user=' .  $args['package']['username'];
+        $str = 'user=' .  strtolower($args['package']['username']);
         $result = $sock->query('/CMD_API_SHOW_USER_CONFIG?' . $str);
         if (substr($result, 0, 7) == 'error=1') {
             $actions[] = 'Create';
@@ -455,7 +455,7 @@ class PluginDirectAdmin extends ServerPlugin
         } elseif ($getRealLink) {
             $sock = new DA($args);
             $sock->setMethod('POST');
-            $sock->loginAs('login');
+            $sock->loginAs(strtolower($args['package']['username']));
             $result = $sock->query(
                 '/CMD_API_LOGIN_KEYS',
                 [
