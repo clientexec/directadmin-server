@@ -469,18 +469,21 @@ class PluginDirectAdmin extends ServerPlugin
             $result = $this->processResult($result);
             if ($result['details'] != '') {
                 return [
-                    'link'    => '<li><a target="_blank" href="' . $result['details'] .'">' .$linkText . '</a></li>',
-                    'rawlink' =>  $result['details'],
-                    'form'    => ''
+                    'fa' => 'fa fa-user fa-fw',
+                    'link' => $result['details'],
+                    'text' =>  $linkText,
+                    'form' => ''
                 ];
             } else {
                 throw new CE_Exception('No URL, check that login keys are enabled');
             }
         } else {
-            $link = 'index.php?fuse=clients&controller=products&action=openpackagedirectlink&packageId='.$userPackage->getId().'&sessionHash='.CE_Lib::getSessionHash();
+            $link = 'index.php?fuse=clients&controller=products&action=openpackagedirectlink&packageId=' . $userPackage->getId() . '&sessionHash=' . CE_Lib::getSessionHash();
 
             return [
-                'link' => '<li><a target="_blank" href="' . $link .  '">' .$linkText . '</a></li>',
+                'fa' => 'fa fa-user fa-fw',
+                'link' => $link,
+                'text' => $linkText,
                 'form' => ''
             ];
         }
