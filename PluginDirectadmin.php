@@ -4,8 +4,8 @@ require_once 'library/CE/NE_MailGateway.php';
 require_once 'modules/admin/models/ServerPlugin.php';
 
 /**
-* @package Plugins
-*/
+ * @package Plugins
+ */
 class PluginDirectAdmin extends ServerPlugin
 {
     public $features = array(
@@ -38,7 +38,7 @@ class PluginDirectAdmin extends ServerPlugin
                 'type' => 'password',
                 'description' => lang('Password used to connect to server'),
                 'value' => '',
-                'encryptable'=> true
+                'encryptable' => true
             ],
             lang('Failure E-mail') => [
                 'type' => 'text',
@@ -47,7 +47,7 @@ class PluginDirectAdmin extends ServerPlugin
             ],
             lang('Use SSL') => [
                 'type' => 'yesno',
-                'description'=> '',
+                'description' => '',
                 'value' => '1'
             ],
             lang('Port') => [
@@ -74,23 +74,6 @@ class PluginDirectAdmin extends ServerPlugin
         // direct admin only allows for all lowercase usernames.
         $args['package']['username'] = trim(strtolower($args['package']['username']));
         return $args['package']['username'];
-    }
-
-    private function processResult($result)
-    {
-        $return = [];
-        if (substr($result, 0, 7) == 'error=1') {
-            $msg = explode('&', $result);
-            $return['error'] = '1';
-            $return['msg'] = $msg[1];
-        } else {
-            $return['error'] = '0';
-            $result = explode('&', $result);
-            if (isset($result[2])) {
-                $return['details'] = urldecode(substr($result[2], 8));
-            }
-        }
-        return $return;
     }
 
     public function create($args)
@@ -120,27 +103,21 @@ class PluginDirectAdmin extends ServerPlugin
             'notify' => 'no'
         ];
 
-        $result = $sock->query($cmd, $tArray);
-
-        CE_Lib::log(4, 'DirectAdmin Create Result: ' . $result);
-        $result = $this->processResult($result);
-
-        if ($result['error'] == '1') {
+        try {
+            $result = $sock->query($cmd, $tArray);
+        } catch (CE_Exception $e) {
+            $errorMsg = $e->getMessage();
             $mailGateway = new NE_MailGateway();
 
             $mailGateway->mailMessageEmail(
-                "DirectAdmin plugin: A failure occurred while connecting to the DA server. Message Returned: {$result['msg']}.",
+                "DirectAdmin plugin: A failure occurred while connecting to the DA server. Message Returned: {$errorMsg}.",
                 $args['server']['variables']['plugin_directadmin_Failure_E-mail'],
                 "DirectAdmin Plugin",
                 $args['server']['variables']['plugin_directadmin_Failure_E-mail'],
                 "",
                 "[CE] DirectAdmin plugin: Connection to DA server failed"
             );
-
-            $errormsg = "A failure occurred while connecting to the DA server. An E-mail with details has been sent to ".$args['server']['variables']['plugin_directadmin_Failure_E-mail'].". Please note that your query has not been executed on the server.";
-            CE_Lib::log(4, 'DirectAdmin Create Error: ' . $result['msg']);
-
-            throw new CE_Exception($errormsg);
+            throw new CE_Exception($errorMsg);
         }
         return;
     }
@@ -154,34 +131,27 @@ class PluginDirectAdmin extends ServerPlugin
             'delete' => 'yes',
             'select0' => strtolower($args['package']['username'])
         ];
-        $result = $sock->query('/CMD_API_SELECT_USERS', $tArray);
-        CE_Lib::log(4, 'DirectAdmin Delete Result: ' . $result);
-        $result = $this->processResult($result);
-
-        if ($result['error'] == '1') {
+        try {
+            $result = $sock->query('/CMD_API_SELECT_USERS', $tArray);
+        } catch (CE_Exception $e) {
+            $errorMsg = $e->getMessage();
             $mailGateway = new NE_MailGateway();
 
             $mailGateway->mailMessageEmail(
-                "DirectAdmin plugin: A failure occurred while deleting ".$args['package']['username'].".  Message Returned: {$result['msg']}.",
+                "DirectAdmin plugin: A failure occurred while deleting " . $args['package']['username'] . ".  Message Returned: {$errorMsg}.",
                 $args['server']['variables']['plugin_directadmin_Failure_E-mail'],
                 "DirectAdmin Plugin",
                 $args['server']['variables']['plugin_directadmin_Failure_E-mail'],
                 "",
                 "[CE] DirectAdmin plugin: Failure on deleting user."
             );
-
-            $errormsg = "A failure occurred while deleting a user. An E-mail with details has been sent to ".$args['server']['variables']['plugin_directadmin_Failure_E-mail'].".";
-            CE_Lib::log(4, 'DirectAdmin Delete Error: ' . $errormsg);
-
-            throw new CE_Exception($errormsg);
+            throw new CE_Exception($errorMsg);
         }
     }
 
     public function update($args)
     {
         $errormsg = "";
-        $packagename = $args['package']['name_on_server'];
-
         $sock = new DA($args);
         $sock->setMethod('POST');
 
@@ -197,11 +167,10 @@ class PluginDirectAdmin extends ServerPlugin
                     ];
                     $result = $sock->query('/CMD_API_USER_PASSWD', $tArray);
                     CE_Lib::log(4, 'DirectAdmin Password Update Result: ' . $result);
-                    $result = $this->processResult($result);
 
                     if ($result['error'] == '1') {
                         $mailGateway->mailMessageEmail(
-                            "DirectAdmin plugin: A failure occurred while changing the password of ".$args['package']['username'].".  Message Returned: {$result['msg']}.",
+                            "DirectAdmin plugin: A failure occurred while changing the password of " . $args['package']['username'] . ".  Message Returned: {$result['msg']}.",
                             $args['server']['variables']['plugin_directadmin_Failure_E-mail'],
                             "DirectAdmin Plugin",
                             $args['server']['variables']['plugin_directadmin_Failure_E-mail'],
@@ -210,7 +179,7 @@ class PluginDirectAdmin extends ServerPlugin
                         );
 
                         // Create and log the error. Then throw an error.
-                        $errormsg = "A failure occurred while changing the password. An E-mail with details has been sent to ".$args['server']['variables']['plugin_directadmin_Failure_E-mail'].".";
+                        $errormsg = "A failure occurred while changing the password. An E-mail with details has been sent to " . $args['server']['variables']['plugin_directadmin_Failure_E-mail'] . ".";
                         CE_Lib::log(4, 'DirectAdmin Password Update Error: ' . $errormsg);
 
                         throw new CE_Exception($errormsg);
@@ -228,7 +197,7 @@ class PluginDirectAdmin extends ServerPlugin
                     CE_Lib::log(4, 'DirectAdmin IP Update Result: ' . $result);
                     if ($result['error'] == '1') {
                         $mailGateway->mailMessageEmail(
-                            "DirectAdmin plugin: A failure occurred while changing the IP of user ".$args['package']['username'].". Message Returned: {$result['msg']}.",
+                            "DirectAdmin plugin: A failure occurred while changing the IP of user " . $args['package']['username'] . ". Message Returned: {$result['msg']}.",
                             $args['server']['variables']['plugin_directadmin_Failure_E-mail'],
                             "DirectAdmin Plugin",
                             $args['server']['variables']['plugin_directadmin_Failure_E-mail'],
@@ -237,7 +206,7 @@ class PluginDirectAdmin extends ServerPlugin
                         );
 
                         // Create and log the error. Then throw an error.
-                        $errormsg = "A failure occurred while changing the IP. An E-mail with details has been sent to ".$args['server']['variables']['plugin_directadmin_Failure_E-mail'].".";
+                        $errormsg = "A failure occurred while changing the IP. An E-mail with details has been sent to " . $args['server']['variables']['plugin_directadmin_Failure_E-mail'] . ".";
                         CE_Lib::log(4, 'DirectAdmin IP Update Error: ' . $errormsg);
 
                         throw new CE_Exception($errormsg);
@@ -248,7 +217,7 @@ class PluginDirectAdmin extends ServerPlugin
                     $tArray = [
                         'action' => 'package',
                         'user' => strtolower($args['package']['username']),
-                        'package' => $value
+                        'package' => $args['package']['name_on_server']
                     ];
 
                     $result = $sock->query('/CMD_MODIFY_USER', $tArray);
@@ -256,7 +225,7 @@ class PluginDirectAdmin extends ServerPlugin
 
                     if ($result['error'] == '1') {
                         $mailGateway->mailMessageEmail(
-                            "DirectAdmin plugin: A failure occurred while changing the package of user ".$args['package']['username'].". Message Returned: {$result['msg']}.",
+                            "DirectAdmin plugin: A failure occurred while changing the package of user " . $args['package']['username'] . ". Message Returned: {$result['msg']}.",
                             $args['server']['variables']['plugin_directadmin_Failure_E-mail'],
                             "DirectAdmin Plugin",
                             $args['server']['variables']['plugin_directadmin_Failure_E-mail'],
@@ -265,7 +234,7 @@ class PluginDirectAdmin extends ServerPlugin
                         );
 
                         // Create and log the error. Then throw an error.
-                        $errormsg = "A failure occurred while changing the package. An E-mail with details has been sent to ".$args['server']['variables']['plugin_directadmin_Failure_E-mail'].".";
+                        $errormsg = "A failure occurred while changing the package. An E-mail with details has been sent to " . $args['server']['variables']['plugin_directadmin_Failure_E-mail'] . ".";
                         CE_Lib::log(4, 'DirectAdmin Package Update Error: ' . $errormsg);
 
                         throw new CE_Exception($errormsg);
@@ -281,33 +250,24 @@ class PluginDirectAdmin extends ServerPlugin
         $sock = new DA($args);
         $sock->setMethod('POST');
         $tArray = [
-            'location' => 'CMD_SELECT_USERS',
-            'suspend'  => 'Suspend/Unsuspend',
             'select0'  => strtolower($args['package']['username']),
-            'dosuspend' => 1
+            'dosuspend' => 1,
         ];
-        $result = $sock->query('/CMD_API_SELECT_USERS', $tArray);
-
-        CE_Lib::log(4, 'DirectAdmin Suspend Result: ' . $result);
-        $result = $this->processResult($result);
-
-        if ($result['error'] == '1') {
+        try {
+            $result = $sock->query('/CMD_API_SELECT_USERS', $tArray);
+        } catch (CE_Exception $e) {
+            $errorMsg = $e->getMessage();
             $mailGateway = new NE_MailGateway();
 
             $mailGateway->mailMessageEmail(
-                "DirectAdmin plugin: A failure occurred while suspending ".$args['package']['username'].".  Message Returned: {$result['msg']}.",
+                "DirectAdmin plugin: A failure occurred while suspending " . $args['package']['username'] . ".  Message Returned: {$errorMsg}.",
                 $args['server']['variables']['plugin_directadmin_Failure_E-mail'],
                 "DirectAdmin Plugin",
                 $args['server']['variables']['plugin_directadmin_Failure_E-mail'],
                 "",
                 "[CE] DirectAdmin plugin: Failure on suspending user."
             );
-
-           // Create and log the error. Then throw an error.
-            $errormsg = "A failure occurred while suspending a user. An E-mail with details has been sent to ".$args['server']['variables']['plugin_directadmin_Failure_E-mail'].".";
-            CE_Lib::log(4, 'DirectAdmin Suspend Error: ' . $errormsg);
-
-            throw new CE_Exception($errormsg);
+            throw new CE_Exception($errorMsg);
         }
     }
 
@@ -316,32 +276,24 @@ class PluginDirectAdmin extends ServerPlugin
         $sock = new DA($args);
         $sock->setMethod('POST');
         $tArray = [
-            'location' => 'CMD_SELECT_USERS',
-            'suspend'  => 'Suspend/Unsuspend',
             'select0'  => strtolower($args['package']['username']),
             'dounsuspend' => 1
         ];
-        $result = $sock->query('/CMD_API_SELECT_USERS', $tArray);
-
-        CE_Lib::log(4, 'DirectAdmin UnSuspend Result: ' . $result);
-        $result = $this->processResult($result);
-
-        if ($result['error'] == '1') {
+        try {
+            $result = $sock->query('/CMD_API_SELECT_USERS', $tArray);
+        } catch (CE_Exception $e) {
+            $errorMsg = $e->getMessage();
             $mailGateway = new NE_MailGateway();
 
             $mailGateway->mailMessageEmail(
-                "DirectAdmin plugin: A failure occurred while unsuspending ".$args['package']['username'].".  Message Returned: {$result['msg']}.",
+                "DirectAdmin plugin: A failure occurred while unsuspending " . $args['package']['username'] . ".  Message Returned: {$errorMsg}.",
                 $args['server']['variables']['plugin_directadmin_Failure_E-mail'],
                 "DirectAdmin Plugin",
                 $args['server']['variables']['plugin_directadmin_Failure_E-mail'],
                 "",
                 "[CE] DirectAdmin plugin: Failure on suspending user."
             );
-
-            $errormsg = "A failure occurred while unsuspending a user. An E-mail with details has been sent to ".$args['server']['variables']['plugin_directadmin_Failure_E-mail'].".";
-            CE_Lib::log(4, 'DirectAdmin UnSuspend Error: ' . $errormsg);
-
-            throw new CE_Exception($errormsg);
+            throw new CE_Exception($errorMsg);
         }
     }
 
@@ -392,8 +344,7 @@ class PluginDirectAdmin extends ServerPlugin
         $sock->setMethod('GET');
         $str = 'user=' .  strtolower($args['package']['username']);
         $result = $sock->query('/CMD_API_SHOW_USER_CONFIG?' . $str);
-        $result = $this->processResult($result);
-        if ($result['error'] == '1') {
+        if (isset($result['error']) && ($result['error'] == 'Unable to show user' || $result['error'] == 'Cannot show user')) {
             return false;
         } else {
             return true;
@@ -408,24 +359,14 @@ class PluginDirectAdmin extends ServerPlugin
         $sock->setMethod('GET');
         $str = 'user=' .  strtolower($args['package']['username']);
         $result = $sock->query('/CMD_API_SHOW_USER_CONFIG?' . $str);
-        if (substr($result, 0, 7) == 'error=1') {
+        if (isset($result['error']) && ($result['error'] == 'Unable to show user' || $result['error'] == 'Cannot show user')) {
             $actions[] = 'Create';
         } else {
-            $info = explode('&', $result);
-            $suspended = '';
-            foreach ($info as $i) {
-                $tmp = explode('=', $i);
-                if ($tmp[0] == 'suspended') {
-                    $suspended = $tmp[1];
-                    break;
-                }
-            }
-            if ($suspended == 'yes') {
+            if ($result['suspended'] == 'yes') {
                 $actions[] = 'UnSuspend';
             } else {
                 $actions[] = 'Suspend';
             }
-
             $actions[] = 'Delete';
         }
         return $actions;
@@ -437,12 +378,10 @@ class PluginDirectAdmin extends ServerPlugin
         $sock = new DA($args);
         $sock->setMethod('GET');
         $result = $sock->query('/CMD_API_SHOW_USERS');
-        if (strpos($result, "CMD_LOGIN") == true) {
-            throw new CE_Exception('Connection to server failed');
-        }
+        // The exception is thrown in the query method if not logged in (meaning bad user/pass)
     }
 
-    function getDirectLink($userPackage, $getRealLink = true, $fromAdmin = false, $isReseller = false)
+    public function getDirectLink($userPackage, $getRealLink = true, $fromAdmin = false, $isReseller = false)
     {
         $args = $this->buildParams($userPackage);
         $linkText = $this->user->lang('Login to DirectAdmin');
@@ -466,11 +405,12 @@ class PluginDirectAdmin extends ServerPlugin
                     'passwd' => $args['server']['variables']['plugin_directadmin_Password'],
                 ]
             );
-            $result = $this->processResult($result);
-            if ($result['details'] != '') {
+
+            if (isset($result['result']) && $result['result'] != '') {
+                CE_Lib::log(4, 'Link: ' . $result['result']);
                 return [
                     'fa' => 'fa fa-user fa-fw',
-                    'link' => $result['details'],
+                    'link' => $result['result'],
                     'text' =>  $linkText,
                     'form' => ''
                 ];
@@ -490,23 +430,23 @@ class PluginDirectAdmin extends ServerPlugin
     }
 
 
-    function dopanellogin($args)
+    public function dopanellogin($args)
     {
         $userPackage = new UserPackage($args['userPackageId']);
         $response = $this->getDirectLink($userPackage);
-        return $response['rawlink'];
+        return $response['link'];
     }
 }
 
 class DA
 {
-    var $method = 'GET';
-    var $host;
-    var $port;
-    var $user;
-    var $pass;
-    var $useSSL;
-    var $settings;
+    public $method = 'GET';
+    public $host;
+    public $port;
+    public $user;
+    public $pass;
+    public $useSSL;
+    public $settings;
 
     public function __construct($args)
     {
@@ -533,8 +473,8 @@ class DA
 
     public function query($request, $content = '')
     {
-        $url = ($this->useSSL) ? 'https://' : 'http://';
-        $url .=  "{$this->host}:{$this->port}{$request}";
+        $queryDelimiter = strpos($request, '?') === false ? '?' : '&';
+        $url = ($this->useSSL ? 'https://' : 'http://') . "{$this->host}:{$this->port}{$request}{$queryDelimiter}json=yes";
         $ch = curl_init($url);
 
         $caPathOrFile = \Composer\CaBundle\CaBundle::getSystemCaRootBundlePath();
@@ -560,6 +500,29 @@ class DA
             throw new CE_Exception('DirectAdmin Error: ' . $error);
         }
         curl_close($ch);
-        return $this->result;
+
+        $decodedResult = json_decode($this->result, true);
+
+        if ($decodedResult && isset($decodedResult['error'])) {
+            $errorMessage = $decodedResult['error'];
+            $resultMessage = $decodedResult['result'];
+            switch ($errorMessage) {
+                case 'Your IP is blacklisted':
+                    throw new CE_Exception('DirectAdmin Error: IP blacklisted.');
+                    break;
+                case 'Not logged in':
+                    throw new CE_Exception('DirectAdmin Error: Not logged in.');
+                    break;
+                case 'Cannot show user':
+                case 'Unable to show user':
+                    return $decodedResult;
+                    break;
+                default:
+                    throw new CE_Exception('DirectAdmin Error: ' . $errorMessage . ' ' . $resultMessage);
+                    break;
+            }
+        }
+
+        return $decodedResult;
     }
 }
